@@ -1,0 +1,88 @@
+variable "availability_zones_names" {
+  type = "list"
+}
+
+variable "ready" {
+}
+
+variable "man_main_route_table_id" {
+}
+
+variable "man_vpc_id" {
+}
+
+
+variable "bastion_cidr_blocks" {
+  type = "list"
+}
+
+// This is for temporary internet access until the client has set up a VPN Server
+
+resource "aws_key_pair" "admin" {
+  key_name    = "admin-key"
+  public_key   = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCv/5ZdOlccDdzBBUP/cZGXXmJ1LNbcfiq74ylX9jVv86XvgB2QCbzoHKDfG5qcTXpHDmatdZHJNk1M8oAHabAXnaYRD5sE0B0wKZg8KghX2XEc/Sv/OlidaHFMpAxRBpF8w9ySthvPO0hlldljuYlOVqYwsfBOUJgmC2LUVqtdCK579i0mKmmk3MKnHwv2iK3/vrRMUbGKr27j75wx/yRZOBMDtWITPIa1Z9e7BJQcczCpXBKHwFM0mPx7/9bOhTrdql9USk3ym47ebbVSlwLM9MRsZ+44ibV2fDv0+rmRT9ij7tU7Trmf0/J6olJaZk6/e43fMtQv1ZN7JnzJr3//"
+}
+
+resource "aws_security_group" "bastion_sg" {
+  vpc_id  = "${var.man_vpc_id}"
+  name    = "bastion-sg"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_subnet" "bastion_subnet" {
+  count		                = "${length(var.availability_zones_names)}"
+  vpc_id                    = "${var.man_vpc_id}"
+  availability_zone         = "${var.availability_zones_names[count.index]}"
+  cidr_block                = "${var.bastion_cidr_blocks[count.index]}"
+  map_public_ip_on_launch   = true
+  tags {
+    Name = "bastion_subnet_az${count.index}"
+  }
+}
+
+resource "aws_instance" "management_bastion" {
+  count		      = "${length(var.availability_zones_names)}"
+  ami             = "ami-bb9a6bc2"
+  instance_type   = "t2.micro"
+  subnet_id 	  = "${aws_subnet.bastion_subnet.*.id[count.index]}"
+  key_name        = "admin-key"
+  security_groups = ["${aws_security_group.bastion_sg.id}"]
+  user_data = <<-EOF
+      #!/bin/bash
+      sudo yum -y install awscli
+      EOF
+  tags {
+    Name          = "management_bastion-${count.index}"
+  }
+}
+
+resource "aws_internet_gateway" "management_bastion_gw" {
+  vpc_id = "${var.man_vpc_id}"
+
+  tags {
+    Name = "management_bastion_gw"
+  }
+}
+
+resource "aws_route" "management2internet" {
+  route_table_id          = "${var.man_main_route_table_id}"
+  destination_cidr_block  = "0.0.0.0/0"
+  gateway_id              = "${aws_internet_gateway.management_bastion_gw.id}"
+}
+
+output "bastion_subnet_ids" {
+  value = "${aws_subnet.bastion_subnet.*.id}"
+}
