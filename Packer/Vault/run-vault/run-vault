@@ -115,8 +115,8 @@ function generate_vault_config {
   log_info "Creating default Vault config file in $config_path"
   cat > "$config_path" <<EOF
 storage "s3" {
-  access_key = "AKIAIQSDLIWNB76AWLRQ"
-  secret_key = "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"
+  access_key = "<Access key for user allowed to assume role defined in Terraform>"
+  secret_key = "<Secret key for user allowed to assume role defined in Terraform>"
   bucket = "$s3_bucket"
   region = "$s3_bucket_region"
 }

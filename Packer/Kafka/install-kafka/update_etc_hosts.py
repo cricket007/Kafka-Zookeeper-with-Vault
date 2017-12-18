@@ -85,13 +85,8 @@ def updateHosts(kmaxInstances, zkmaxInstances):
     # stop kafka
     subprocess.check_output("sudo su ec2-user -c 'sudo service kafka stop'", shell=True, executable='/bin/bash')
 
-    # remove previous kafka and zookeeper entries
-    #subprocess.check_output("sudo python /tmp/install-kafka/deleteEntries.py",shell=True, executable='/bin/bash')
-
     # Update the /etc/hosts file
     # Add hosts entries (mocking DNS) - put relevant IPs here
-    # define the function blocks
-
     #update the kafka IP's
     index = 0
     print('the max kafka instances is: '+str(kmaxInstances))
