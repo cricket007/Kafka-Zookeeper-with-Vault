@@ -35,7 +35,7 @@ data "aws_ami" "kafka_node" {
     values = ["hvm"]
   }
 
-  owners = ["095955279155"] # my account
+  owners = ["<your account ID>"] # my account
 }
 
 /*resource "aws_s3_bucket" "kafka_bucket" {

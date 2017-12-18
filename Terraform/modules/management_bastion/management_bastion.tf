@@ -20,7 +20,7 @@ variable "bastion_cidr_blocks" {
 
 resource "aws_key_pair" "admin" {
   key_name    = "admin-key"
-  public_key   = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCv/5ZdOlccDdzBBUP/cZGXXmJ1LNbcfiq74ylX9jVv86XvgB2QCbzoHKDfG5qcTXpHDmatdZHJNk1M8oAHabAXnaYRD5sE0B0wKZg8KghX2XEc/Sv/OlidaHFMpAxRBpF8w9ySthvPO0hlldljuYlOVqYwsfBOUJgmC2LUVqtdCK579i0mKmmk3MKnHwv2iK3/vrRMUbGKr27j75wx/yRZOBMDtWITPIa1Z9e7BJQcczCpXBKHwFM0mPx7/9bOhTrdql9USk3ym47ebbVSlwLM9MRsZ+44ibV2fDv0+rmRT9ij7tU7Trmf0/J6olJaZk6/e43fMtQv1ZN7JnzJr3//"
+  public_key   = "<key generated from your predefined user allowed to assume the IAN role defined in main.tf - see ssh-keygen -y on https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws>"
 }
 
 resource "aws_security_group" "bastion_sg" {

@@ -33,7 +33,7 @@ data "aws_ami" "vault_node" {
     values = ["hvm"]
   }
 
-  owners = ["095955279155"] # my account
+  owners = ["<your account ID>"] # my account
 }
 
 resource "aws_launch_configuration" "vault_ASG_launch" {

@@ -40,7 +40,7 @@ resource "aws_s3_bucket_policy" "kafka_connect_bucket_policy" {
         "Sid": "AllowList",
         "Effect": "Allow",
         "Principal": {
-          "AWS": "arn:aws:iam::095955279155:role/Terraform"
+          "AWS": "<ARN predefined to allow Terraform to create everything>"
         },
         "Action": "s3:*",
         "Resource": [

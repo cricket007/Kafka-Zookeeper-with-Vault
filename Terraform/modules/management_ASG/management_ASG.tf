@@ -37,7 +37,7 @@ data "aws_ami" "management_node" {
     values = ["hvm"]
   }
 
-  owners = ["095955279155"] # my account
+  owners = ["<your account ID>"] # my account
 }
 
 resource "aws_launch_configuration" "management_ASG_launch" {

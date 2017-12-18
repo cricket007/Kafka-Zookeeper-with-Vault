@@ -14,14 +14,14 @@ terraform {
     bucket    = "pp-lb-transaction-processing-terraform-state-qa"
     key       = "terraform.tfstate"
     region    = "eu-west-1"
-    role_arn  = "arn:aws:iam::095955279155:role/Terraform"
+    role_arn  = "${var.terraform_role}"
     acl       = "private"
     encrypt   = true
   }
 }
 
-resource "aws_iam_role" "system_user" {
-  name = "system_user"
+resource "aws_iam_role" "system_role" {
+  name = "system_role"
 
   assume_role_policy = <<EOF
 {
@@ -31,7 +31,7 @@ resource "aws_iam_role" "system_user" {
       "Sid": "",
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::095955279155:root"
+        "AWS": "arn:aws:iam::<your account ID>:root"
       },
       "Action": "sts:AssumeRole"
     },
@@ -50,7 +50,7 @@ EOF
 
 resource "aws_iam_role_policy" "allow_all_policy" {
   name = "system_user_policy"
-  role = "${aws_iam_role.system_user.id}"
+  role = "${aws_iam_role.system_role.id}"
 
   policy = <<EOF
 {
@@ -166,7 +166,7 @@ module "vault_ASG" {
   access_key        = "${var.access_key}"
   secret_key        = "${var.secret_key}"
   management_sg_id  = "${module.management_vpc.management_sg_id}"
-  system_role_arn = "${aws_iam_role.system_user.arn}"
+  system_role_arn = "${aws_iam_role.system_role.arn}"
 }
 
 

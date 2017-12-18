@@ -9,7 +9,7 @@ variable "secret_key" {
 }
 
 variable "terraform_role" {
-  default = "arn:aws:iam::095955279155:role/Terraform"
+  default = "<ARN for IAM Role predefined to allow Terraform to create everything>"
   description = "The AWS urole that terraform would use"
 }
 
