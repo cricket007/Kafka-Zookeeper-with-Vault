@@ -101,6 +101,23 @@ installed via docker images:
     default = "**&lt;ARN for IAM Role predefined to allow Terraform to create everything&gt;**"
     description = "The AWS urole that terraform would use"
   }
+- In the /Terraform/modules/*_ASG directories
+    - in the data "aws_ami" ?_node { definition, replace: owners = ["**&lt;your account ID&gt;**"] with the same account number defined in the packer files
+    
+#### Create the AMI's needed with Packer
+- In the Packer directories containing the respctive .json files:
+    - packer build vault-consul.json
+    - packer build management-tools.json
+    - packer build kafka.json
+    - packer build zookeeper.json
+
+### Using the Environment
+- In /Terraform/envs/test:
+    - init Terraform:  **terraform init -var-file=&lt;directory of your credential file&gt;/credentials.tvars**
+    - get the modules: **terraform get**
+    - run the plan:  **terraform plan -var-file=&lt;directory of your credential file>&gt;/credentials.tvars -out=./plan**
+    - create the environment: **terraform apply ./plan**
+
 
 ### to-Do's
 - put kafka-connect into proper ASG and get it installed
