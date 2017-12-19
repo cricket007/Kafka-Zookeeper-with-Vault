@@ -1,7 +1,6 @@
 # Kafka Zookeeper with Vault
 
-![Image of Diagram] 
-(diagram.png) 
+![Image of Diagram] (design.png)
 
 
 ## Accelerator for running Kafka, Zookeeper, and Vault in AWS 
