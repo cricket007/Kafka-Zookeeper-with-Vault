@@ -117,7 +117,8 @@ installed via docker images:
     - get the modules: **terraform get**
     - run the plan:  **terraform plan -var-file=&lt;directory of your credential file>&gt;/credentials.tvars -out=./plan**
     - create the environment: **terraform apply ./plan**
-
+- when fully run, your AWS instances will look like:
+![](aws-instances.png)
 
 ### to-Do's
 - put kafka-connect into proper ASG and get it installed
