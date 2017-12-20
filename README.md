@@ -14,7 +14,7 @@
 &nbsp;&nbsp; Management - where the bastions, Management tools, and Vault reside
 
 - within these VPC's are separate subnets to allow the components to be divided across AZ's
-&nbsp;&nbsp; via ASG's. You can vary the size of the ASG's: 
+via the ASG's. You can vary the size of the ASG's: 
 
 &nbsp;&nbsp; -The zookeeper ASG has 3 intances (it's recommended to start with 3 to give full resiliance and no more than 5) 
 
@@ -27,8 +27,8 @@
 - VPC peering allows traffic between the two
 
 - The ASG intances get allocated valid Name tags (and DNS names) via instance tracking 
-DynamoDB tables. DynamoDB tables were used instead of s3 object because of issues with 
-latency and race conditions. Often instances would ge the same names on environment 
+DynamoDB tables. DynamoDB tables were used instead of s3 objects because of issues with 
+latency and race conditions. Often instances would get the same names on environment 
 creation. The kafka connect ASG is yet to be changed to do this - they are place holders. If 
 you wish to use S3, there is commented code both in the Packer and Terraform files that 
 show you how to do this.
@@ -82,7 +82,7 @@ installed via docker images:
         - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
 
 
-#### In the /Packer/*/install-*/ dirs (* = server name)
+#### In the /Packer/?/install-?/ dirs (? = server name)
 - add the .pem file for the user allowed to assume the role **system_role** defined by Terraform
 - replace this value in:
     - private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-kafka/**&lt;your .pem file>&gt;**')
@@ -101,7 +101,7 @@ installed via docker images:
     default = "**&lt;ARN for IAM Role predefined to allow Terraform to create everything&gt;**"
     description = "The AWS urole that terraform would use"
   }
-- In the /Terraform/modules/*_ASG directories
+- In the /Terraform/modules/?_ASG directories
     - in the data "aws_ami" ?_node { definition, replace: owners = ["**&lt;your account ID&gt;**"] with the same account number defined in the packer files
     
 #### Create the AMI's needed with Packer
