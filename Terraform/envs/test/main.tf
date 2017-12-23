@@ -11,9 +11,9 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    bucket    = "pp-lb-transaction-processing-terraform-state-qa"
+    bucket    = "<name for your state bucket>"
     key       = "terraform.tfstate"
-    region    = "eu-west-1"
+    region    = "${var.region}"
     role_arn  = "${var.terraform_role}"
     acl       = "private"
     encrypt   = true

@@ -1,9 +1,3 @@
-variable "management_sg_id"{
-}
-
-variable "system_role_arn"{
-}
-
 resource "aws_dynamodb_table" "vault-state-table" {
   name           = "vault-state"
   read_capacity  = 20

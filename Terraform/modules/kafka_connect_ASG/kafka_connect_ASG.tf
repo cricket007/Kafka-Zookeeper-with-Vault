@@ -1,85 +1,72 @@
-variable "k_connect_subnets" {
-  type = "list"
-}
+resource "aws_dynamodb_table" "kafka_connect-state-table" {
+  name           = "kafka_connect-state"
+  read_capacity  = 20
+  write_capacity = 20
+  hash_key       = "state_name"
 
-variable "az_list"{
-  type = "list"
-}
-
-variable "kafka_connect_ebs_vol_size" {
-}
-
-variable "kafka_connect_ebs_vol_type" {
-}
-
-variable "lounge_sg_id"{
-}
-
-variable "ready" {
-}
-variable "kready" {
-}
-
-resource "aws_s3_bucket" "kafka_connect_bucket" {
-  bucket = "kafka-connect-bucket-pp"
-  acl    = "bucket-owner-full-control"
-  force_destroy = true
+  attribute {
+    name = "state_name"
+    type = "S"
+  }
 
   tags {
-    Name        = "kafka-connect-bucket"
+    Name        = "kafka_connect-state-table"
   }
 }
 
-resource "aws_s3_bucket_policy" "kafka_connect_bucket_policy" {
-  bucket = "${aws_s3_bucket.kafka_connect_bucket.id}"
-  policy =<<POLICY
-{
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Sid": "AllowList",
-        "Effect": "Allow",
-        "Principal": {
-          "AWS": "<ARN predefined to allow Terraform to create everything>"
-        },
-        "Action": "s3:*",
-        "Resource": [
-            "arn:aws:s3:::kafka-connect-bucket-pp",
-            "arn:aws:s3:::kafka-connect-bucket-pp/*"
-        ]
-      }
-    ]
+data "aws_ami" "kafka_connect_node" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["kafka_connect-RHEL-linux-74*"]
   }
-  POLICY
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+  owners = ["<your account ID>"] # my account
+
 }
 
 resource "aws_launch_configuration" "kafka_connect_ASG_launch" {
-  depends_on = ["aws_s3_bucket.kafka_connect_bucket","aws_s3_bucket_policy.kafka_connect_bucket_policy"]
-  image_id      = "ami-bb9a6bc2"
-  instance_type = "t2.micro"
-  //depends_on = ["aws_ebs_volume.kafka_connect_ebs_AZ1","aws_ebs_volume.kafka_connect_ebs_AZ2","aws_ebs_volume.kafka_connect_ebs_AZ3"]
+  depends_on = ["data.aws_ami.kafka_connect_node"]
+  image_id      = "${data.aws_ami.kafka_connect_node.id}"
+  instance_type = "t2.medium"
   security_groups = ["${var.lounge_sg_id}"]
   key_name          = "admin-key"
 
   lifecycle {
     create_before_destroy = true
   }
-  /*
-  ebs_block_device {
-    device_name = "/dev/sdf"
-    volume_size = "${var.kafka_connect_ebs_vol_size}"
-    volume_type = "${var.kafka_connect_ebs_vol_type}"
-  }
-  */
+
+  user_data = <<-EOF
+      #!/bin/bash -ex
+      exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+      echo BEGIN
+      # wait for the zookeeper and kafka clusters to complete setup
+      sleep 180
+      su ec2-user -c 'source ~/.bash_profile; python /tmp/install-kafka_connect/conf_kafka_connect.py'
+      # set up kafka connect topics in existing kafka cluster
+      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-avro-offsets'
+      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-avro-config'
+      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-avro-status'
+      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-data'
+      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --list --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181'
+      # run kafka connect
+      su ec2-user -c 'source ~/.bash_profile; /usr/local/bin/docker-compose -f /tmp/install-kafka_connect/kafka-connect-docker-compose.yml up -d'
+      echo END
+      EOF
 }
 
 resource "aws_autoscaling_group" "kafka_connect_ASG" {
   vpc_zone_identifier		= ["${var.k_connect_subnets}"]
   name                      = "kafka_connect_ASG"
-  max_size                  = 5
+  max_size                  = 3
   min_size                  = 3
-  health_check_grace_period = 300
-  health_check_type			    = "EC2"
+  health_check_grace_period = 10
+  health_check_type			= "EC2"
   force_delete              = true
   launch_configuration      = "${aws_launch_configuration.kafka_connect_ASG_launch.name}"
   tag {
@@ -93,7 +80,7 @@ resource "aws_autoscaling_policy" "kafka_connect_ASG_policy" {
   name                   = "kafka_connect_ASG_add_one_policy"
   scaling_adjustment     = 1
   adjustment_type        = "ChangeInCapacity"
-  cooldown               = 300
+  cooldown               = 60
   autoscaling_group_name = "${aws_autoscaling_group.kafka_connect_ASG.name}"
 }
 

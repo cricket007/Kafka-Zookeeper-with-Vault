@@ -1,27 +1,3 @@
-variable "k_subnets" {
-  type = "list"
-}
-
-variable "zkready" {
-}
-
-variable "az_list"{
-  type = "list"
-}
-
-variable "lounge_sg_id"{
-}
-
-
-variable "kafka_ebs_vol_size" {
-}
-
-variable "kafka_ebs_vol_type" {
-}
-
-variable "ready" {
-}
-
 data "aws_ami" "kafka_node" {
   most_recent = true
 
@@ -34,8 +10,8 @@ data "aws_ami" "kafka_node" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
-
   owners = ["<your account ID>"] # my account
+
 }
 
 /*resource "aws_s3_bucket" "kafka_bucket" {
