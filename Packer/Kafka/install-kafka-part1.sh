@@ -12,6 +12,7 @@ sudo yum -y localinstall jdk-8u152-linux-x64.rpm
 rm jdk-8u152-linux-x64.rpm
 java -version
 
+
 # Add file limits configs - allow to open 100,000 file descriptors
 echo "* hard nofile 100000
 * soft nofile 100000" | sudo tee --append /etc/security/limits.conf

@@ -66,21 +66,27 @@ def getAWSValues():
         print("instance Tag is: "+tagName)
         if tagName == '':
             print("there is still no value for the instance tag, so assuming it is kafka")
-            tagName = 'management'
+            tagName = 'kafka_connect'
 
+    # get the ASG details for kafka connect
+    asg = boto3.client('autoscaling')
+    kcAsg = asg.describe_auto_scaling_groups(
+        AutoScalingGroupNames=[
+            'kafka_connect_ASG',
+        ]
+    )
+
+    kcmaxinstances = kcAsg['AutoScalingGroups'][0]['MaxSize']
+    instancelist = kcAsg['AutoScalingGroups'][0]['Instances']
 
     # get the ASG details for kafka and zookeeper
-    asg = boto3.client('autoscaling')
     kAsg = asg.describe_auto_scaling_groups(
         AutoScalingGroupNames=[
             'kafka_ASG',
         ]
     )
-    print('the kafka ASGs are: '+str(kAsg['AutoScalingGroups']))
-    print('the kafka ASG details are: '+str(kAsg['AutoScalingGroups'][0]['AutoScalingGroupName']))
-    print('the kafka max instnces are: '+str(kAsg['AutoScalingGroups'][0]['MaxSize']))
+
     kmaxinstances = kAsg['AutoScalingGroups'][0]['MaxSize']
-    instancelist = kAsg['AutoScalingGroups'][0]['Instances']
 
     zkAsg = asg.describe_auto_scaling_groups(
         AutoScalingGroupNames=[
@@ -92,19 +98,19 @@ def getAWSValues():
     print('the zookeeper max instnces are: '+str(zkAsg['AutoScalingGroups'][0]['MaxSize']))
     zkmaxinstances = zkAsg['AutoScalingGroups'][0]['MaxSize']
 
-    return [localIp, instanceId, tagName, kmaxinstances, zkmaxinstances, instancelist, region]
+    return [localIp, instanceId, tagName, kcmaxinstances, kmaxinstances, zkmaxinstances, instancelist, region]
 
 def getStateFile(table, maxinstances):
     #initialise the default json file
     state = {
-        'state_name' : 'management',
+        'state_name' : 'kafka_connect',
         'changed'    : '',
         'nodes'      : 0
     }
     index = 0
     while index < maxinstances:
         index += 1
-        state['management'+str(index)] = '0.0.0.0'
+        state['kafka_connect'+str(index)] = '0.0.0.0'
 
     print ('the default json data is: '+str(state))
 
@@ -112,7 +118,7 @@ def getStateFile(table, maxinstances):
     try:
         response = table.get_item(
             Key={
-                'state_name': 'management'
+                'state_name': 'kafka_connect'
             }
         )
         print('the dynamodb response is: '+str(response))
@@ -120,7 +126,7 @@ def getStateFile(table, maxinstances):
         print('the state stored in the dynamodb table is: '+str(state))
     except Exception as e:
         print('the exception is: '+str(e))
-        if str(e) == '\'Item\'':
+        if '\'Item\'' in str(e) or  '(ResourceNotFoundException)' in str(e):
             print('there is no item the first time the table is read, ignore')
         else:
             raise e
@@ -132,7 +138,7 @@ def getStateFile(table, maxinstances):
 
 def changeTagName(tag, ip, state, list, maxinstances, region):
     # changing the default instance tag name to reflect the node in the ASG
-    if tag == 'management':
+    if tag == 'kafka_connect':
         # if we're initialising the ASG
         if state['nodes'] < maxinstances:
             print('changing name for initial node')
@@ -153,13 +159,47 @@ def changeTagName(tag, ip, state, list, maxinstances, region):
 
     return [tag, state]
 
+def createLists(kmaxInstances,zkmaxInstances):
+
+    session = boto3.Session(profile_name='terraform')
+    dynamodb = session.resource('dynamodb')
+    ktable = dynamodb.Table('kafka-state')
+
+    try:
+        response = ktable.get_item(
+            Key={
+                'state_name': 'kafka'
+            }
+        )
+        print('the dynamodb response is: '+str(response))
+        kdata = response['Item']
+        print('the state stored in the dynamodb table is: '+str(kdata))
+    except Exception as e:
+        print('the exception is: '+str(e))
+        if str(e) == '\'Item\'':
+            print('there is no item the first time the table is read, ignore')
+        else:
+            raise e
+
+    # add kafka hosts
+    index = 0
+    etc_hosts_list = ''
+    kafkaList = ''
+    while index < kmaxInstances:
+        index += 1
+        etc_hosts_list = etc_hosts_list+'- \"kafka'+str(index)+": "+kdata['kafka'+str(index)]+"\"\n"
+        kafkaList = kafkaList+kdata['kafka'+str(index)]+":9092,"
+
+    kafkaList = kafkaList[:-1]
+
+    return [etc_hosts_list, kafkaList]
 
 if __name__ == "__main__":
 
     # initialise needed variables
     session = boto3.Session(profile_name='terraform')
     dynamodb = session.resource('dynamodb')
-    table = dynamodb.Table('management-state')
+    table = dynamodb.Table('kafka_connect-state')
 
 
     # get the AWS values needed to lookup the relevant state and ASG data
@@ -167,81 +207,40 @@ if __name__ == "__main__":
     LOCAL_IP = valueList[0]
     INSTANCE_ID = valueList[1]
     TAG_VALUE = valueList[2]
-    kmaxInstances = valueList[3]
-    zkmaxInstances = valueList[4]
-    instanceList = valueList[5]
-    region = valueList[6]
+    kcmaxInstances = valueList[3]
+    kmaxInstances = valueList[4]
+    zkmaxInstances = valueList[5]
+    instanceList = valueList[6]
+    region = valueList[7]
 
     # get the current details from the DynamoDB table
-    data = getStateFile(table, kmaxInstances)
+    data = getStateFile(table, kcmaxInstances)
 
     # change the intances tag Name to reflect the node in the ASG
-    retvals = changeTagName(TAG_VALUE, LOCAL_IP, data, instanceList, kmaxInstances, region)
+    retvals = changeTagName(TAG_VALUE, LOCAL_IP, data, instanceList, kcmaxInstances, region)
     TAG_VALUE = retvals[0]
     data = retvals[1]
 
-    # Uploads the given file using a managed uploader, which will split up large
-    # files automatically and upload parts in parallel.
-    #s3.Bucket(bucket_name).put_object(Key=filename, Body=json.dumps(data))
+    # update the DynamoDB table
     table.put_item(Item = data)
 
     # Change the instance Name tag value
     ec2 = session.resource('ec2')
     ec2.create_tags(Resources=[INSTANCE_ID], Tags=[{'Key':'Name', 'Value':TAG_VALUE}])
 
-    # Update the /etc/hosts file
-    # Add hosts entries (mocking DNS) - put relevant IPs here
-    subprocess.check_output("sudo su ec2-user -c \'python /tmp/install-tools/update_etc_hosts.py "+str(kmaxInstances)+" "+str(zkmaxInstances)+"\'", shell=True, executable='/bin/bash')
-
-    # update the services.properties file
-    node = TAG_VALUE[-1:]
-    index = 0
-    zookeeperList = ''
-    while index < zkmaxInstances:
-        index += 1
-        zookeeperList = zookeeperList+'zookeeper'+str(index)+":2181,"
-
-    # remove extraneous comma at en of the list
-    zookeeperList = zookeeperList[:-1]
-    print ('the zookeeper list is: '+zookeeperList)
-
+    # get server name list
     index = 0
     kafkaList = ''
-    while index < kmaxInstances:
+    while index < int(kcmaxInstances):
         index += 1
-        kafkaList = kafkaList+'kakfa'+str(index)+":9092,"
+        print('kafka_connect'+str(index))
+        kafkaList = kafkaList +'kafka_connect'+str(index)+":9092,"
 
-    # remove extraneous comma at en of the list
     kafkaList = kafkaList[:-1]
-    print ('the kafka list is: '+kafkaList)
 
-    if node != "1":
-        subprocess.check_output("sudo python /tmp/install-tools/replaceAll.py /tmp/install-tools/kafka-manager-docker-compose.yml \'ZOOKEEPER_HOSTS: \"zookeeper1:2181,zookeeper2:2181,zookeeper3:2181\"\' \'ZOOKEEPER_HOSTS: \""+zookeeperList+"\"\'", shell=True, executable='/bin/bash')
-        # change the app secret to something you want - default is change_me_please
-        subprocess.check_output("sudo python /tmp/install-tools/replaceAll.py /tmp/install-tools/kafka-manager-docker-compose.yml \'APPLICATION_SECRET: change_me_please\' \'APPLICATION_SECRET: change_me_please\'", shell=True, executable='/bin/bash')
-
-    # update the /etc/hosts on existing kafka nodes to reflect change on this node
-    for key in data:
-        jsonName = key.encode("utf-8")
-        print('jsonName is: ')
-        print(jsonName)
-        print('node in data is: ')
-        print(data[jsonName])
-        if jsonName != TAG_VALUE and jsonName != 'changed' and jsonName != '' and jsonName != 'nodes' and jsonName != 'state_name' and data[jsonName] != '0.0.0.0':
-            try:
-                print('updating etc hosts on: '+jsonName)
-                private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-tools/<your .pem file>')
-                client = paramiko.client.SSHClient()
-                client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                client.connect(jsonName, port=22, username='ec2-user', pkey=private_key)
-                s = client.get_transport().open_session()
-                s.exec_command("sudo su ec2-user -c \'python /tmp/install-tools/update_etc_hosts.py "+str(kmaxInstances)+" "+str(zkmaxInstances)+"\'")
-            except Exception as e:
-                print(str(e))
-
-
-    # add zoonavigator to the instance
-    #subprocess.check_output("sudo su ec2-user -c \'docker-compose -f /tmp/install-tools/zoonavigator-docker-compose.yml up -d\'", shell=True, executable='/bin/bash')
-
-    # add kafka manager to the instance
-    #subprocess.check_output("sudo su ec2-user -c \'docker-compose -f /tmp/install-tools/kafka-manager-docker-compose.yml up -d\'", shell=True, executable='/bin/bash')
+    # Update the /etc/hosts file
+    # Add hosts entries (mocking DNS) - put relevant IPs here
+    subprocess.check_output("sudo su ec2-user -c \'python /tmp/install-kafka_connect/update_etc_hosts.py "+str(kmaxInstances)+" "+str(zkmaxInstances)+" "+str(kcmaxInstances)+"\'", shell=True, executable='/bin/bash')
+    subprocess.check_output("sudo python /tmp/install-kafka_connect/replaceAll.py /opt/kafka/config/worker.properties bootstrap.servers=localhost:9092 bootstrap.servers="+kafkaList, shell=True, executable='/bin/bash')
+    subprocess.check_output("sudo python /tmp/install-kafka_connect/replaceAll.py /opt/kafka/config/worker.properties rest.advertised.host.name=localhost rest.advertised.host.name="+TAG_VALUE, shell=True, executable='/bin/bash')
+    subprocess.check_output("sudo python /tmp/install-kafka_connect/replaceAll.py /opt/kafka/config/worker.properties rest.host.name=localhost rest.host.name="+TAG_VALUE, shell=True, executable='/bin/bash')
