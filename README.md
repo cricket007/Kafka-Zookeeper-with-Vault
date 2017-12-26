@@ -20,17 +20,20 @@ via the ASG's. You can vary the size of the ASG's:
 
 &nbsp;&nbsp; -The Kafka ASG has 5
 
+&nbsp;&nbsp; -The Kafka Connect ASG has 3
+
 &nbsp;&nbsp; -The Vault ASG has 1
 
 &nbsp;&nbsp; -The Management ASG has 3
+
+- The Kafka Connect nodes have been set up in distributed mode, but has no connectors defined
 
 - VPC peering allows traffic between the two
 
 - The ASG intances get allocated valid Name tags (and DNS names) via instance tracking 
 DynamoDB tables. DynamoDB tables were used instead of s3 objects because of issues with 
 latency and race conditions. Often instances would get the same names on environment 
-creation. The kafka connect ASG is yet to be changed to do this - they are place holders. If 
-you wish to use S3, there is commented code both in the Packer and Terraform files that 
+creation. If you wish to use S3, there is commented code both in the Packer and Terraform files that 
 show you how to do this.
 
 - The Management instances have two pre-installed kafka and zookeeper management tools 
@@ -121,7 +124,6 @@ installed via docker images:
 ![](aws-instances.png)
 
 ### to-Do's
-- put kafka-connect into proper ASG and get it installed
 - create Vault and consul clusters
 - Vault requires harcoded AWS keys in run-vault, this needs fixing
 - create an initalisation script to update the user, role, and key info

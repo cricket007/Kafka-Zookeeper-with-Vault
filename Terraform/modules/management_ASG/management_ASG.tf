@@ -40,6 +40,15 @@ data "aws_ami" "management_node" {
   owners = ["<your account ID>"] # my account
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# THE USER DATA SCRIPT THAT WILL RUN ON EACH VAULT SERVER WHEN IT'S BOOTING
+# This script will configure and start Vault
+# ---------------------------------------------------------------------------------------------------------------------
+data "template_file" "user_data_management_cluster" {
+  template = "${file("${path.module}/user-data-management.sh")}"
+
+}
+
 resource "aws_launch_configuration" "management_ASG_launch" {
   image_id      = "${data.aws_ami.management_node.id}"
   instance_type = "t2.micro"
@@ -57,18 +66,18 @@ resource "aws_launch_configuration" "management_ASG_launch" {
   key_name          = "admin-key"
   security_groups   = ["${var.management_sg_id}"]
 
-  //user_data = "${data.template_file.user_data_management_cluster.rendered}"
-  user_data = <<-EOF
-      #!/bin/bash -ex
-      exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-      echo BEGIN
-      # wait for the zookeeper and kafka clusters to complete setup
-      sleep 180
-      su ec2-user -c 'source ~/.bash_profile; python /tmp/install-tools/conf_tools.py'
-      su ec2-user -c 'source ~/.bash_profile; /usr/local/bin/docker-compose -f /tmp/install-tools/zoonavigator-docker-compose.yml up -d'
-      su ec2-user -c 'source ~/.bash_profile; /usr/local/bin/docker-compose -f /tmp/install-tools/kafka-manager-docker-compose.yml up -d'
-      echo END
-      EOF
+  user_data = "${data.template_file.user_data_management_cluster.rendered}"
+//  user_data = <<-EOF
+//      #!/bin/bash -ex
+//      exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+//      echo BEGIN
+//      # wait for the zookeeper and kafka clusters to complete setup
+//      sleep 180
+//      su ec2-user -c 'source ~/.bash_profile; python /tmp/install-tools/conf_tools.py'
+//      su ec2-user -c 'source ~/.bash_profile; /usr/local/bin/docker-compose -f /tmp/install-tools/zoonavigator-docker-compose.yml up -d'
+//      su ec2-user -c 'source ~/.bash_profile; /usr/local/bin/docker-compose -f /tmp/install-tools/kafka-manager-docker-compose.yml up -d'
+//      echo END
+//      EOF
 }
 
 resource "aws_dynamodb_table" "management-state-table" {

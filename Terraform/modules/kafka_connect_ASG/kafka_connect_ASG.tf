@@ -19,7 +19,8 @@ data "aws_ami" "kafka_connect_node" {
 
   filter {
     name   = "name"
-    values = ["kafka_connect-RHEL-linux-74*"]
+    values = ["Kafka_Connect-RHEL-linux-74*"]
+//    values = ["Kafka_Connect-Amazon Linux AMI*"]
   }
 
   filter {
@@ -27,6 +28,15 @@ data "aws_ami" "kafka_connect_node" {
     values = ["hvm"]
   }
   owners = ["<your account ID>"] # my account
+
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# THE USER DATA SCRIPT THAT WILL RUN ON EACH VAULT SERVER WHEN IT'S BOOTING
+# This script will configure and start Vault
+# ---------------------------------------------------------------------------------------------------------------------
+data "template_file" "user_data_kc_cluster" {
+  template = "${file("${path.module}/user-data-kafka_connect.sh")}"
 
 }
 
@@ -41,23 +51,7 @@ resource "aws_launch_configuration" "kafka_connect_ASG_launch" {
     create_before_destroy = true
   }
 
-  user_data = <<-EOF
-      #!/bin/bash -ex
-      exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-      echo BEGIN
-      # wait for the zookeeper and kafka clusters to complete setup
-      sleep 180
-      su ec2-user -c 'source ~/.bash_profile; python /tmp/install-kafka_connect/conf_kafka_connect.py'
-      # set up kafka connect topics in existing kafka cluster
-      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-avro-offsets'
-      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-avro-config'
-      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-avro-status'
-      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --create --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181 --replication-factor 2 --partitions 3 --topic connect-data'
-      su ec2-user -c 'source ~/.bash_profile; /opt/kafka/bin/kafka-topics.sh --list --zookeeper zookeeper1:2181,zookeeper2:2181,zookeeper3:2181'
-      # run kafka connect
-      su ec2-user -c 'source ~/.bash_profile; /usr/local/bin/docker-compose -f /tmp/install-kafka_connect/kafka-connect-docker-compose.yml up -d'
-      echo END
-      EOF
+  user_data = "${data.template_file.user_data_kc_cluster.rendered}"
 }
 
 resource "aws_autoscaling_group" "kafka_connect_ASG" {
@@ -71,7 +65,7 @@ resource "aws_autoscaling_group" "kafka_connect_ASG" {
   launch_configuration      = "${aws_launch_configuration.kafka_connect_ASG_launch.name}"
   tag {
     key                 = "Name"
-    value               = "kafka_connect_ASG"
+    value               = "kafka_connect"
     propagate_at_launch = true
   }
 }

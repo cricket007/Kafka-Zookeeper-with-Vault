@@ -63,6 +63,15 @@ resource "aws_dynamodb_table" "kafka-state-table" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# THE USER DATA SCRIPT THAT WILL RUN ON EACH VAULT SERVER WHEN IT'S BOOTING
+# This script will configure and start Vault
+# ---------------------------------------------------------------------------------------------------------------------
+data "template_file" "user_data_kafka_cluster" {
+  template = "${file("${path.module}/user-data-kafka.sh")}"
+
+}
+
 resource "aws_launch_configuration" "kafka_ASG_launch" {
   depends_on = ["aws_dynamodb_table.kafka-state-table"]
   image_id      = "${data.aws_ami.kafka_node.id}"
@@ -74,15 +83,16 @@ resource "aws_launch_configuration" "kafka_ASG_launch" {
     create_before_destroy = true
   }
 
-  user_data = <<-EOF
-      #!/bin/bash -ex
-      exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-      echo BEGIN
-      # wait for the zookeeper cluster to complete setup
-      sleep 30
-      su ec2-user -c 'source ~/.bash_profile; python /tmp/install-kafka/conf_kafka.py'
-      echo END
-      EOF
+  user_data = "${data.template_file.user_data_kafka_cluster.rendered}"
+//  user_data = <<-EOF
+//      #!/bin/bash -ex
+//      exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+//      echo BEGIN
+//      # wait for the zookeeper cluster to complete setup
+//      sleep 30
+//      su ec2-user -c 'source ~/.bash_profile; python /tmp/install-kafka/conf_kafka.py'
+//      echo END
+//      EOF
 }
 
 resource "aws_autoscaling_group" "kafka_ASG" {
