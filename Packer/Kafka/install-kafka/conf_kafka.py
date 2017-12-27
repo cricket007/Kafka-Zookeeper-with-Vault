@@ -253,7 +253,3 @@ if __name__ == "__main__":
                 s.exec_command("sudo su ec2-user -c \'python /tmp/install-kafka/update_etc_hosts.py "+str(kmaxInstances)+" "+str(zkmaxInstances)+"\'")
             except Exception as e:
                 print(str(e))
-
-
-    # start kafka
-    subprocess.check_output("sudo su ec2-user -c \'sudo service kafka start\'", shell=True, executable='/bin/bash')
