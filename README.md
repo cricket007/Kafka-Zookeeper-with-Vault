@@ -129,7 +129,6 @@ installed via docker images:
 - create an initalisation script to update the user, role, and key info
 - define a network ACL to restric traffic between VPC's
 - add LB's for better ASG health checking
-- add a semophore on accessing the instance state DynamoDB's to remove race conditions
 
 ### License
 Copyright [2017] [Paul Pogonoski]
