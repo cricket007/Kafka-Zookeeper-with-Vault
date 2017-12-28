@@ -241,8 +241,8 @@ if __name__ == "__main__":
 
     # initialise needed variables
     session = boto3.Session(profile_name='terraform')
-    dynamodb = session.resource('dynamodb')
-    table = dynamodb.Table('kafka_connect-state')
+    client = session.client('dynamodb')
+    tablename = 'kafka_connect-state'
 
 
     # get the AWS values needed to lookup the relevant state and ASG data
@@ -257,7 +257,7 @@ if __name__ == "__main__":
     region = valueList[7]
 
     # get the current details from the DynamoDB table
-    data = getStateFile(table, kcmaxInstances)
+    data = getStateFile(client, kcmaxInstances, TAG_VALUE, tablename)
 
     # change the intances tag Name to reflect the node in the ASG
     retvals = changeTagName(TAG_VALUE, LOCAL_IP, data, instanceList, kcmaxInstances, region)
@@ -265,7 +265,10 @@ if __name__ == "__main__":
     data = retvals[1]
 
     # update the DynamoDB table
-    table.put_item(Item = data)
+    client.put_item(
+        Item=data,
+        TableName=tablename
+    )
 
     # Change the instance Name tag value
     ec2 = session.resource('ec2')
