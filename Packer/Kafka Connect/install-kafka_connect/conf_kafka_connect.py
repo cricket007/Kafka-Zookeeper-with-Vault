@@ -100,39 +100,82 @@ def getAWSValues():
 
     return [localIp, instanceId, tagName, kcmaxinstances, kmaxinstances, zkmaxinstances, instancelist, region]
 
-def getStateFile(table, maxinstances):
+
+def getStateFile(client, maxinstances, servername, tablename):
     #initialise the default json file
     state = {
-        'state_name' : 'kafka_connect',
-        'changed'    : '',
-        'nodes'      : 0
+        'state_name' : {'S':'kafka_connect'},
+        'changed'    : {'S':' '},
+        'nodes'      : {'N':'0'},
+        'semaphore'  : {'S':servername}
     }
+
+    attributevalues = {
+        ':val1': {'S':servername},
+        ':val2': {'S':' '}
+    }
+
+    # create initialised table item
     index = 0
     while index < maxinstances:
         index += 1
-        state['kafka_connect'+str(index)] = '0.0.0.0'
+        state['kafka_connect'+str(index)] = {'S':'0.0.0.0'}
 
     print ('the default json data is: '+str(state))
 
+    # update the table with the initialised values and set the semaphore,
+    # unless someone has got there first - wait if they have
+    index = 0
+    while index < 10:
+        index += 1
+        try:
+            client.update_item(
+                Key={
+                    'state_name' : {'S':'kafka_connect'}
+                },
+                TableName=tablename,
+                UpdateExpression='SET semaphore = :val1',
+                ConditionExpression='(contains(semaphore,:val2)) or attribute_not_exists(semaphore)',
+                ExpressionAttributeValues=attributevalues
+            )
+            break
+        except botocore.exceptions.ClientError as e:
+            # Ignore the ConditionalCheckFailedException, bubble up
+            # other exceptions.
+            if e.response['Error']['Code'] != 'ConditionalCheckFailedException':
+                raise
+        time.sleep(5)
 
-    try:
-        response = table.get_item(
-            Key={
-                'state_name': 'kafka_connect'
-            }
-        )
-        print('the dynamodb response is: '+str(response))
-        state = response['Item']
-        print('the state stored in the dynamodb table is: '+str(state))
-    except Exception as e:
-        print('the exception is: '+str(e))
-        if '\'Item\'' in str(e) or  '(ResourceNotFoundException)' in str(e):
-            print('there is no item the first time the table is read, ignore')
-        else:
-            raise e
+    # if there was no error setting the semaphore then commence getting the current state
+    if index < 10:
+        try:
+            response = client.get_item(
+                Key={
+                    'state_name': {'S':'kafka_connect'}
+                },
+                TableName=tablename
+            )
+            print('the dynamodb response is: '+str(response))
+            if response['Item']['nodes'] is None:
+                print ('have just set the semaphore')
+            else:
+                state = response['Item']
+            print('the state stored in the dynamodb table is: '+str(state))
+        except Exception as e:
+            print('the exception is: '+str(e))
+            if '\'Item\'' in str(e) or  '(ResourceNotFoundException)' in str(e):
+                print('there is no item the first time the table is read, ignore')
+            else:
+                if str(e) == '\'nodes\'':
+                    print ('have just set the semaphore, ignore')
+                else:
+                    raise e
 
-    print ('the converted state is: '+str(state))
+        print ('the converted state is: '+str(state))
+    else:
+        raise Exception("the state file is locked and can't update it")
 
+    state['semaphore'] = {'S':' '}
     return state
 
 
@@ -140,21 +183,21 @@ def changeTagName(tag, ip, state, list, maxinstances, region):
     # changing the default instance tag name to reflect the node in the ASG
     if tag == 'kafka_connect':
         # if we're initialising the ASG
-        if state['nodes'] < maxinstances:
+        if int(state.get('nodes').get('N')) < maxinstances:
             print('changing name for initial node')
-            tag = tag+str((state['nodes']+1))
-            state['nodes'] = state['nodes']+1
+            tag = tag+(str(int(state.get('nodes').get('N'))+1))
+            state['nodes'] = {'N':str(int(state.get('nodes').get('N'))+1)}
         # if one of the nodes has died and been replaced in the ASG
         else:
             print('changing name for existing node')
             tag = tag+str(determineNode(list, maxinstances, region))
             print('TAG_VALUE is now: '+tag)
-            state['nodes'] = state['nodes']+1
+            state['nodes'] = {'N':str(int(state.get('nodes').get('N'))+1)}
 
     # Update the JSON with the changed IP for the server
     print (state[tag])
-    state[tag] = ip
-    state['changed'] = tag
+    state[tag] = {'S':ip}
+    state['changed'] = {'S':tag}
     print (state)
 
     return [tag, state]

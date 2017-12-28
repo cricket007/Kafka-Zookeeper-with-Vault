@@ -94,41 +94,6 @@ def getAWSValues():
 
     return [localIp, instanceId, tagName, kmaxinstances, zkmaxinstances, instancelist, region]
 
-def getStateFile(table, maxinstances):
-    #initialise the default json file
-    state = {
-        'state_name' : 'management',
-        'changed'    : '',
-        'nodes'      : 0
-    }
-    index = 0
-    while index < maxinstances:
-        index += 1
-        state['management'+str(index)] = '0.0.0.0'
-
-    print ('the default json data is: '+str(state))
-
-
-    try:
-        response = table.get_item(
-            Key={
-                'state_name': 'management'
-            }
-        )
-        print('the dynamodb response is: '+str(response))
-        state = response['Item']
-        print('the state stored in the dynamodb table is: '+str(state))
-    except Exception as e:
-        print('the exception is: '+str(e))
-        if str(e) == '\'Item\'':
-            print('there is no item the first time the table is read, ignore')
-        else:
-            raise e
-
-    print ('the converted state is: '+str(state))
-
-    return state
-
 def getStateFile(client, maxinstances, servername, tablename):
     #initialise the default json file
     state = {
@@ -151,7 +116,8 @@ def getStateFile(client, maxinstances, servername, tablename):
 
     print ('the default json data is: '+str(state))
 
-    # update the table with the initialised values unless someone has got there first and set the semaphore
+    # update the table with the initialised values and set the semaphore,
+    # unless someone has got there first - wait if they have
     index = 0
     while index < 10:
         index += 1
@@ -173,6 +139,7 @@ def getStateFile(client, maxinstances, servername, tablename):
                 raise
         time.sleep(5)
 
+    # if there was no error setting the semaphore then commence getting the current state
     if index < 10:
         try:
             response = client.get_item(
@@ -210,7 +177,6 @@ def changeTagName(tag, ip, state, list, maxinstances, region):
     # changing the default instance tag name to reflect the node in the ASG
     if tag == 'management':
         # if we're initialising the ASG
-        print('state.get(\'nodes\').get(\'N\') is : '+state.get('nodes').get('N'))
         if int(state.get('nodes').get('N')) < maxinstances:
             print('changing name for initial node')
             tag = tag+(str(int(state.get('nodes').get('N'))+1))
@@ -311,7 +277,7 @@ if __name__ == "__main__":
         print(jsonName)
         print('node in data is: ')
         print(data[jsonName].get('S'))
-        if jsonName != TAG_VALUE and jsonName != 'changed' and jsonName != '' and jsonName != 'nodes' and jsonName != 'state_name' and jsonName != 'semaphore'and data[jsonName] != '0.0.0.0':
+        if jsonName != TAG_VALUE and jsonName != 'changed' and jsonName != '' and jsonName != 'nodes' and jsonName != 'state_name' and jsonName != 'semaphore' and data[jsonName] != '0.0.0.0':
             try:
                 print('updating etc hosts on: '+jsonName)
                 private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-tools/<your .pem file>')
