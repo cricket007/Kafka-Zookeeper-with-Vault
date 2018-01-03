@@ -4,13 +4,13 @@
     "aws_region": "eu-west-1",
     "vault_version": "0.9.0",
     "consul_module_version": "v0.0.2",
-    "consul_version": "1.0.0",
+    "consul_version": "1.0.2",
     "ca_public_key_path": "{{template_dir}}/tls/ca.crt.pem",
     "tls_public_key_path": "{{template_dir}}/tls/vault.crt.pem",
     "tls_private_key_path": "{{template_dir}}/tls/vault.key.pem"
   },
   "builders": [{
-    "ami_name": "vault-consul-RHEL-linux-74-{{isotime | clean_ami_name}}",
+    "ami_name": "vault-RHEL-linux-74-{{isotime | clean_ami_name}}",
     "ami_description": "Red Hat Enterprise Linux 7.4 AMI that has Vault and Consul installed.",
     "instance_type": "t2.micro",
     "region": "{{user `aws_region`}}",
@@ -106,27 +106,6 @@
       "sudo chown ec2-user:ec2-user /opt/vault/tls/*",
       "sudo chmod 600 /opt/vault/tls/*",
       "sudo /tmp/update-certificate-store/update-certificate-store --cert-file-path /opt/vault/tls/ca.crt.pem"
-    ]
-  },{
-    "type": "file",
-    "source": "{{template_dir}}/install-consul",
-    "destination": "/tmp",
-    "pause_before": "10s"
-  },{
-    "type": "file",
-    "source": "{{template_dir}}/run-consul",
-    "destination": "/tmp",
-    "pause_before": "10s"
-  },{
-    "type": "file",
-    "source": "{{template_dir}}/install-dnsmasq",
-    "destination": "/tmp",
-    "pause_before": "10s"
-  },{
-    "type": "shell",
-    "inline": [
-      "/tmp/install-consul/install-consul --version {{user `consul_version`}} --user ec2-user",
-      "/tmp/install-dnsmasq/install-dnsmasq"
     ]
   }]
 }

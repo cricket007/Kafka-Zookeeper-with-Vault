@@ -80,6 +80,15 @@ function assert_not_empty {
   fi
 }
 
+function get_elb_dns {
+  local readonly elb_name="$1"
+  local elb_json=""
+
+  log_info "Looking up the size of the consul elb $elb_name"
+  elb_json=$(aws elb describe-load-balancers --load-balancer-names "$elb_name")
+  echo "$elb_json" | jq -r '.LoadBalancerDescriptions[0].DNSName'
+}
+
 function lookup_path_in_instance_metadata {
   local readonly path="$1"
   curl --silent --location "$EC2_INSTANCE_METADATA_URL/$path/"
@@ -107,10 +116,13 @@ function generate_vault_config {
   local readonly user="$6"
   local readonly s3_bucket="$7"
   local readonly s3_bucket_region="$8"
+  local readonly elb_name="$9"
   local readonly config_path="$config_dir/$VAULT_CONFIG_FILE"
 
   local instance_ip_address
   instance_ip_address=$(get_instance_ip_address)
+  elb_dns=$(get_elb_dns $elb_name)
+  elb_dns+=":8500"
 
   log_info "Creating default Vault config file in $config_path"
   cat > "$config_path" <<EOF
@@ -122,7 +134,7 @@ storage "s3" {
 }
 
 ha_storage "consul" {
-  address = "127.0.0.1:8500"
+  address = "$elb_dns"
   path    = "vault/"
   scheme  = "http"
   service = "vault"
@@ -133,8 +145,8 @@ ha_storage "consul" {
 }
 
 listener "tcp" {
-  address         = "0.0.0.0:$port"
-  cluster_address = "0.0.0.0:$cluster_port"
+  address         = "127.0.0.1:$port"
+  cluster_address = "127.0.0.1:$cluster_port"
   tls_cert_file   = "$tls_cert_file"
   tls_key_file    = "$tls_key_file"
 }
@@ -183,6 +195,7 @@ function run {
   local tls_key_file=""
   local port="$DEFAULT_PORT"
   local cluster_port=""
+  local consul_elb_name=""
   local s3_bucket=""
   local s3_bucket_region=""
   local config_dir=""
@@ -221,6 +234,11 @@ function run {
       --cluster-port)
         assert_not_empty "$key" "$2"
         cluster_port="$2"
+        shift
+        ;;
+      --elb-name)
+        assert_not_empty "$key" "$2"
+        consul_elb_name="$2"
         shift
         ;;
       --config-dir)
@@ -298,7 +316,7 @@ function run {
   if [[ "$skip_vault_config" == "true" ]]; then
     log_info "The --skip-vault-config flag is set, so will not generate a default Vault config file."
   else
-    generate_vault_config "$tls_cert_file" "$tls_key_file" "$port" "$cluster_port" "$config_dir" "$user" "$s3_bucket" "$s3_bucket_region"
+    generate_vault_config "$tls_cert_file" "$tls_key_file" "$port" "$cluster_port" "$config_dir" "$user" "$s3_bucket" "$s3_bucket_region" "$consul_elb_name"
   fi
 
   generate_supervisor_config "$SUPERVISOR_CONFIG_PATH" "$config_dir" "$bin_dir" "$log_dir" "$log_level" "$user"

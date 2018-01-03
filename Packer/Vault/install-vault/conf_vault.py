@@ -84,7 +84,6 @@ def getAWSValues():
 
     return [localIp, instanceId, tagName, vmaxinstances, instancelist, region]
 
-
 def getStateFile(client, maxinstances, servername, tablename):
     #initialise the default json file
     state = {
@@ -250,7 +249,7 @@ if __name__ == "__main__":
         if jsonName != TAG_VALUE and jsonName != 'changed' and jsonName != '' and jsonName != 'nodes' and jsonName != 'state_name' and jsonName != 'semaphore' and data[jsonName] != '0.0.0.0':
             try:
                 print('updating etc hosts on: '+jsonName)
-                private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-kafka/<your .pem file>')
+                private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-vault/<your.pem>')
                 client = paramiko.client.SSHClient()
                 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 client.connect(jsonName, port=22, username='ec2-user', pkey=private_key)
