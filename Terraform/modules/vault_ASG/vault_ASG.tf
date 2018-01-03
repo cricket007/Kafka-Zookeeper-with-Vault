@@ -19,7 +19,7 @@ data "aws_ami" "vault_node" {
 
   filter {
     name   = "name"
-    values = ["vault-consul-RHEL-linux-74*"]
+    values = ["vault-RHEL-linux-74*"]
   }
 
   filter {
@@ -40,6 +40,14 @@ resource "aws_launch_configuration" "vault_ASG_launch" {
     create_before_destroy = true
   }
 
+  ebs_optimized = "${var.root_volume_ebs_optimized}"
+
+  root_block_device {
+    volume_type           = "${var.root_volume_type}"
+    volume_size           = "${var.root_volume_size}"
+    delete_on_termination = "${var.root_volume_delete_on_termination}"
+  }
+
   user_data = "${data.template_file.user_data_vault_cluster.rendered}"
 }
 
@@ -47,8 +55,8 @@ resource "aws_autoscaling_group" "vault_ASG" {
   depends_on = ["aws_dynamodb_table.vault-state-table"]
   vpc_zone_identifier		= ["${var.subnets}"]
   name                      = "vault_ASG"
-  max_size                  = 1
-  min_size                  = 1
+  max_size                  = 5
+  min_size                  = 3
   health_check_grace_period = 10
   health_check_type			= "EC2"
   force_delete              = true
@@ -79,7 +87,8 @@ data "template_file" "user_data_vault_cluster" {
     aws_region               = "${var.region}"
     s3_bucket_name           = "${var.s3_bucket_name}"
     consul_cluster_tag_key   = "${var.consul_cluster_tag_key}"
-    consul_cluster_tag_value = "${var.consul_cluster_name}"
+    consul_cluster_tag_value = "${var.consul_cluster_value}"
+    consul_elb_name          = "${var.consul_elb_name}"
   }
 }
 

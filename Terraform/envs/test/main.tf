@@ -155,18 +155,37 @@ module "management_bastion" {
   ready                     = "${module.management_vpc.management_vpc_ready}"
 }
 
-module "vault_ASG" {
-  source            = "../../modules/vault_ASG"
+module "consul_ASG" {
+  source            = "../../modules/consul_ASG"
   subnets			= "${module.management_vpc.vault_subnet_ids}"
+  region            = "${var.region}"
+  access_key        = "${var.access_key}"
+  secret_key        = "${var.secret_key}"
+  management_vpc_id  = "${module.management_vpc.management_vpc_id}"
+  system_role_arn = "${aws_iam_role.system_role.arn}"
   /*
   ** wait until management VPC creation is finished
   */
   ready             = "${module.management_vpc.management_vpc_ready}"
-  region            = "${var.region}"
-  access_key        = "${var.access_key}"
-  secret_key        = "${var.secret_key}"
-  management_sg_id  = "${module.management_vpc.management_sg_id}"
-  system_role_arn = "${aws_iam_role.system_role.arn}"
+}
+
+module "vault_ASG" {
+  source                  = "../../modules/vault_ASG"
+  subnets			      = "${module.management_vpc.vault_subnet_ids}"
+  region                  = "${var.region}"
+  access_key              = "${var.access_key}"
+  secret_key              = "${var.secret_key}"
+  management_sg_id        = "${module.management_vpc.management_sg_id}"
+  system_role_arn         = "${aws_iam_role.system_role.arn}"
+  consul_elb_name         = "${module.consul_ASG.consul_elb_name}"
+  /*
+  ** wait until Consul ASG creation is finished
+  */
+  consul_ready                     = "${module.consul_ASG.consul_ready}"
+  /*
+  ** wait until management VPC creation is finished
+  */
+  ready             = "${module.management_vpc.management_vpc_ready}"
 }
 
 

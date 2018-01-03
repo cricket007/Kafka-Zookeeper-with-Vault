@@ -22,7 +22,9 @@ via the ASG's. You can vary the size of the ASG's:
 
 &nbsp;&nbsp; -The Kafka Connect ASG has 3
 
-&nbsp;&nbsp; -The Vault ASG has 1
+&nbsp;&nbsp; -The consul ASG has 3
+
+&nbsp;&nbsp; -The Vault ASG has 3
 
 &nbsp;&nbsp; -The Management ASG has 3
 
@@ -40,6 +42,9 @@ show you how to do this.
 installed via docker images: 
     - Kafka Manager (port 9000 - https://github.com/yahoo/kafka-manager)
     - Zoonavigator (port 8001 - https://github.com/elkozmon/zoonavigator)
+    
+- The Consul ASG has an ELB in front of it for ASG health checking and allows the Vault cluster 
+instances to utilise the Consul cluster as the consul client agents don't work.
 
 
 
@@ -124,11 +129,10 @@ installed via docker images:
 ![](aws-instances.png)
 
 ### to-Do's
-- create Vault and consul clusters
 - Vault requires harcoded AWS keys in run-vault, this needs fixing
+- Consul requires harcoded AWS keys in run-consul, this needs fixing
 - create an initalisation script to update the user, role, and key info
 - define a network ACL to restric traffic between VPC's
-- add LB's for better ASG health checking
 
 ### License
 Copyright [2017] [Paul Pogonoski]

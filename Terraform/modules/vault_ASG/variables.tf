@@ -2,6 +2,10 @@ variable "ready" {
 
 }
 
+variable "consul_ready" {
+
+}
+
 variable "management_sg_id"{
 }
 
@@ -49,20 +53,45 @@ variable "s3_bucket_name" {
 
 variable "cluster_name" {
   description = "The name of the Vault cluster (e.g. vault-stage). This variable is used to namespace all resources created by this module."
-  default = "vault-cluster"
+  default = "vault_ASG"
 }
 
 variable "vault_cluster_name" {
   description = "What to name the Vault server cluster and all of its associated resources"
-  default     = "vault-cluster"
+  default     = "vault_ASG"
 }
 
-variable "consul_cluster_name" {
+variable "consul_cluster_value" {
   description = "What to name the Consul server cluster and all of its associated resources"
-  default     = "consul-cluster"
+  default     = "consul_ASG"
+}
+
+variable "consul_elb_name" {
+  description = "The name of the consul ELB"
+  default     = ""
 }
 
 variable "consul_cluster_tag_key" {
   description = "The tag the Consul EC2 Instances will look for to automatically discover each other and form a cluster."
-  default     = "consul-servers"
+  default     = "aws:autoscaling:groupName"
+}
+
+variable "root_volume_ebs_optimized" {
+  description = "If true, the launched EC2 instance will be EBS-optimized."
+  default     = false
+}
+
+variable "root_volume_type" {
+  description = "The type of volume. Must be one of: standard, gp2, or io1."
+  default     = "standard"
+}
+
+variable "root_volume_size" {
+  description = "The size, in GB, of the root EBS volume."
+  default     = 50
+}
+
+variable "root_volume_delete_on_termination" {
+  description = "Whether the volume should be destroyed on instance termination."
+  default     = true
 }
