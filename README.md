@@ -106,7 +106,7 @@ instances to utilise the Consul cluster, as the consul client agents just don't 
     - private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-kafka/**&lt;your .pem file>&gt;**')
 - **For Vault ONLY** replace these variable values with your org's own, in the /Packer/Vault/run-vault/run-vault script:
     - access_key = "&lt;Access key for user allowed to assume role defined in Terraform&gt;"
-    secret_key = "&lt;Secret key for user allowed to assume role defined in Terraform&gt;"
+    - secret_key = "&lt;Secret key for user allowed to assume role defined in Terraform&gt;"
 - **For Consul ONLY** replace these variable values with your org's own, in the /Packer/Consul/run-consul/run-consul script line:
     
     - "retry_join": ["provider=aws region=$instance_region tag_key=$cluster_tag_key tag_value=$cluster_tag_value access_key_id="**&lt;Access key for user allowed to assume role defined in Terraform&gt**" secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt**"],
