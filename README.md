@@ -4,8 +4,8 @@
 
 ## Accelerator for running Kafka, Zookeeper, and Vault in AWS 
 ### About the Accelerator
-- Packer files for the Bastion hosts, Management tools, Kafka, Zookeeper, and Vault servers
-- Terraform files the Bastion hosts, Management tools, Kafka, Zookeeper, and Vault servers/ASG's
+- Packer files for the Bastion hosts, Management tools, Kafka, Zookeeper, Consul and Vault servers
+- Terraform files the Bastion hosts, Management tools, Kafka, Zookeeper, Consul and Vault servers/ASG's
 - Python scripts to start the applications on the servers
 - The design has two VPC's:
 
@@ -22,7 +22,7 @@ via the ASG's. You can vary the size of the ASG's:
 
 &nbsp;&nbsp; -The Kafka Connect ASG has 3
 
-&nbsp;&nbsp; -The consul ASG has 3
+&nbsp;&nbsp; -The Consul ASG has 3
 
 &nbsp;&nbsp; -The Vault ASG has 3
 
@@ -30,21 +30,21 @@ via the ASG's. You can vary the size of the ASG's:
 
 - The Kafka Connect nodes have been set up in distributed mode, but has no connectors defined
 
-- VPC peering allows traffic between the two
+- VPC peering allows traffic between the Management and Transaction VPC's
 
 - The ASG intances get allocated valid Name tags (and DNS names) via instance tracking 
-DynamoDB tables. DynamoDB tables were used instead of s3 objects because of issues with 
+DynamoDB tables. DynamoDB tables were used instead of S3 objects because of issues with 
 latency and race conditions. Often instances would get the same names on environment 
 creation. If you wish to use S3, there is commented code both in the Packer and Terraform files that 
 show you how to do this.
 
-- The Management instances have two pre-installed kafka and zookeeper management tools 
+- The Management instances have two pre-installed Kafka and Zookeeper management tools 
 installed via docker images: 
     - Kafka Manager (port 9000 - https://github.com/yahoo/kafka-manager)
     - Zoonavigator (port 8001 - https://github.com/elkozmon/zoonavigator)
     
 - The Consul ASG has an ELB in front of it for ASG health checking and allows the Vault cluster 
-instances to utilise the Consul cluster as the consul client agents don't work.
+instances to utilise the Consul cluster, as the consul client agents just don't work.
 
 
 
@@ -71,7 +71,13 @@ instances to utilise the Consul cluster as the consul client agents don't work.
         - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
         - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
 
-- In vault-consul.json:
+- In consul.json:
+
+    - replace these values in the following lines:
+        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
+        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
+
+- In vault.json:
 
     - replace these values in the following lines:
         - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
@@ -88,6 +94,10 @@ instances to utilise the Consul cluster as the consul client agents don't work.
     - replace these values in the following lines:
         - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
         - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
+        
+- In all of the install-? directories:
+
+    - add a .pem file that you reference in the conf_?.py script. This will allow paramiko to successfully SSH
 
 
 #### In the /Packer/?/install-?/ dirs (? = server name)
@@ -97,6 +107,12 @@ instances to utilise the Consul cluster as the consul client agents don't work.
 - **For Vault ONLY** replace these variable values with your org's own, in the /Packer/Vault/run-vault/run-vault script:
     - access_key = "&lt;Access key for user allowed to assume role defined in Terraform&gt;"
     secret_key = "&lt;Secret key for user allowed to assume role defined in Terraform&gt;"
+- **For Consul ONLY** replace these variable values with your org's own, in the /Packer/Consul/run-consul/run-consul script line:
+    
+    - "retry_join": ["provider=aws region=$instance_region tag_key=$cluster_tag_key tag_value=$cluster_tag_value access_key_id="**&lt;Access key for user allowed to assume role defined in Terraform&gt**" secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt**"],
+    
+    with the appropriate values
+
 
 
 #### update the terraform .tf files
