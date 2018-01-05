@@ -52,6 +52,20 @@
   },{
     "type": "shell",
     "inline": [
+      "sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm",
+      "sudo yum update -y",
+      "sudo yum install -y jq"
+    ]
+  },{
+    "type": "shell",
+    "inline": [
+      "sudo yum -y install wget",
+      "wget https://rpmfind.net/linux/centos/6.9/os/x86_64/Packages/busybox-1.15.1-21.el6_6.x86_64.rpm",
+      "sudo yum -y localinstall busybox-1.15.1-21.el6_6.x86_64.rpm"
+    ]
+  },{
+    "type": "shell",
+    "inline": [
       "sudo easy_install pip"
     ]
   },{
@@ -62,7 +76,7 @@
       "sudo pip install kazoo",
       "sudo pip install paramiko"
     ]
-  },{
+  }{
     "type": "shell",
     "inline": [
       "mkdir ~/.aws",

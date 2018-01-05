@@ -96,15 +96,9 @@
     "destination": "/tmp",
     "pause_before": "10s"
   },{
-    "type": "file",
-    "source": "{{template_dir}}/install-dnsmasq",
-    "destination": "/tmp",
-    "pause_before": "10s"
-  },{
     "type": "shell",
     "inline": [
-      "/tmp/install-consul/install-consul --version {{user `consul_version`}} --user ec2-user",
-      "/tmp/install-dnsmasq/install-dnsmasq"
+      "/tmp/install-consul/install-consul --version {{user `consul_version`}} --user ec2-user"
     ]
   }]
 }

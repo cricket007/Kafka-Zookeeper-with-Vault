@@ -84,9 +84,13 @@ function install_supervisord_amazon_linux {
   # On Amazon Linux, /usr/local/bin is not in PATH for the root user, so we add symlinks to /usr/bin, which is in PATH
   if [[ ! -f "/usr/bin/supervisorctl" ]]; then
     sudo ln -s /usr/local/bin/supervisorctl /usr/bin/supervisorctl
+  else
+    sudo ln -s /usr/bin/supervisorctl  /usr/local/bin/supervisorctl
   fi
   if [[ ! -f "/usr/bin/supervisord" ]]; then
     sudo ln -s /usr/local/bin/supervisord /usr/bin/supervisord
+  else
+    sudo ln -s /usr/bin/supervisord /usr/local/bin/supervisord
   fi
 
   sudo cp "$SCRIPT_DIR/supervisor-initd-script.sh" "/etc/init.d/supervisor"
@@ -94,8 +98,14 @@ function install_supervisord_amazon_linux {
   sudo mkdir -p /var/log/supervisor
 
   create_supervisor_config
+  log_info "about to add supervisor to chkconfig"
   sudo chkconfig --add supervisor
+  log_info "about to enable supervisor"
   sudo chkconfig supervisor on
+
+  # Amazon Linux does not automatically start supervisord after installing it. This command does that.
+  log_info "about to start supervisor"
+  sudo service supervisor start
 }
 
 function create_supervisor_config {
@@ -124,6 +134,7 @@ function install_dependencies {
     cd /tmp
     wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
     sudo yum install -y ./epel-release-latest-*.noarch.rpm
+    sudo yum install -y jq
     sudo sudo yum install -y python-pip
     sudo pip install --upgrade pip
     curl https://s3.amazonaws.com/aws-cli/awscli-bundle.zip -o awscli-bundle.zip

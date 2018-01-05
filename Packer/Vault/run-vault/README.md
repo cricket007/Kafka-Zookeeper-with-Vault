@@ -5,8 +5,9 @@ script has been tested on the following operating systems:
 
 * Ubuntu 16.04
 * Amazon Linux
+* RHEL 7.4
 
-There is a good chance it will work on other flavors of Debian, CentOS, and RHEL as well.
+There is a good chance it will work on other flavors of Debian, and CentOS as well.
 
 
 
@@ -14,11 +15,11 @@ There is a good chance it will work on other flavors of Debian, CentOS, and RHEL
 ## Quick start
 
 This script assumes you installed it, plus all of its dependencies (including Vault itself), using the [install-vault 
-module](https://github.com/hashicorp/terraform-aws-vault/tree/master/modules/install-vault). The default install path is `/opt/vault/bin`, so to start Vault in server mode, you 
+Directory](https://github.com/pogo61/Kafka-Zookeeper-with-Vault/tree/master/Packer/Vault/install-vault). The default install path is `/opt/vault/bin`, so to start Vault in server mode, you 
 run:
 
 ```
-/opt/vault/bin/run-vault --s3-bucket my-vault-bucket --s3-bucket-region us-east-1 --tls-cert-file /opt/vault/tls/vault.crt.pem --tls-key-file /opt/vault/tls/vault.key.pem
+/opt/vault/bin/run-vault --s3-bucket my-vault-bucket --s3-bucket-region us-east-1 --tls-cert-file /opt/vault/tls/vault.crt.pem --tls-key-file /opt/vault/tls/vault.key.pem --elb-name &lt;the name of the AWS ELB for Consul Cluster&gt;;
 ```
 
 This will:
@@ -33,13 +34,10 @@ This will:
 
 1. Tell Supervisor to load the new configuration file, thereby starting Vault.
 
-We recommend using the `run-vault` command as part of [User 
-Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts), so that it executes
+The `run-vault` command is run as part of [User 
+Data](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html#user-data-shell-scripts) in the [Terraform module](https://github.com/pogo61/Kafka-Zookeeper-with-Vault/tree/master/Terraform/modules/vault_ASG), so that it executes
 when the EC2 Instance is first booting. After running `run-vault` on that initial boot, the `supervisord` configuration 
 will automatically restart Vault if it crashes or the EC2 instance reboots.
-
-See the [vault-cluster-public](https://github.com/hashicorp/terraform-aws-vault/tree/master/examples/vault-cluster-public) and 
-[vault-cluster-private](https://github.com/hashicorp/terraform-aws-vault/tree/master/examples/vault-cluster-private) examples for fully-working sample code.
 
 
 
@@ -55,6 +53,7 @@ The `run-vault` script accepts the following arguments:
   appear first in the combined file. See [How do you handle encryption?](#how-do-you_handle-encryption) for more info.
 * `--tls-key-file` (required): Specifies the path to the private key for the certificate. See [How do you handle 
   encryption?](#how-do-you_handle-encryption) for more info.
+* `--elb-name` (required): Specifies the Name tag value for the AWS elb for the AWS ASG consul cluster.   
 * `--port` (optional): The port Vault should listen on. Default is `8200`.   
 * `--log-level` (optional): The log verbosity to use with Vault. Default is `info`.   
 * `--cluster-port` (optional): The port Vault should listen on for server-to-server communication. Default is 
@@ -98,7 +97,7 @@ available.
   availability](https://www.vaultproject.io/docs/concepts/ha.html) storage backend with the following settings:
 
     * [address](https://www.vaultproject.io/docs/configuration/storage/consul.html#address): Set the address to 
-      `127.0.0.1:8500`. This is based on the assumption that the Consul agent is running on the same server.
+      `<elb-name>:8500`. This is based on the assumption that there is a separate Consul cluster.
     * [scheme](https://www.vaultproject.io/docs/configuration/storage/consul.html#scheme): Set to `http` since our
       connection is to a Consul agent running on the same server.
     * [path](https://www.vaultproject.io/docs/configuration/storage/consul.html#path): Set to `vault/`.
@@ -115,10 +114,10 @@ available.
 * [listener](https://www.vaultproject.io/docs/configuration/index.html#listener): Configure a [TCP 
   listener](https://www.vaultproject.io/docs/configuration/listener/tcp.html) with the following settings:
 
-    * [address](https://www.vaultproject.io/docs/configuration/listener/tcp.html#address): Bind to `0.0.0.0:<PORT>` 
+    * [address](https://www.vaultproject.io/docs/configuration/listener/tcp.html#address): Bind to `127.0.0.1:<PORT>` 
       where `PORT` is the value passed to `--port`.
     * [cluster_address](https://www.vaultproject.io/docs/configuration/listener/tcp.html#cluster_address): Bind to 
-      `0.0.0.0:<CLUSTER_PORT>` where `CLUSTER` is the value passed to `--cluster-port`.
+      `127.0.0.1:<CLUSTER_PORT>` where `CLUSTER` is the vault cluster and the value passed to `--cluster-port`.
     * [tls_cert_file](https://www.vaultproject.io/docs/configuration/listener/tcp.html#tls_cert_file): Set to the 
       `--tls-cert-file` parameter.
     * [tls_key_file](https://www.vaultproject.io/docs/configuration/listener/tcp.html#tls_key_file): Set to the 
