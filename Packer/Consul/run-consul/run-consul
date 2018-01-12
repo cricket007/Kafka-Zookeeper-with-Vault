@@ -172,7 +172,7 @@ function generate_consul_config {
     log_warn "Either the cluster tag key ($cluster_tag_key) or value ($cluster_tag_value) is empty. Will not automatically try to form a cluster based on EC2 tags."
   else
     retry_join_json=$(cat <<EOF
-"retry_join": ["provider=aws region=$instance_region tag_key=$cluster_tag_key tag_value=$cluster_tag_value access_key_id="<Access key for user allowed to assume role defined in Terraform>" secret_access_key=<Secret key for user allowed to assume role defined in Terraform>"],
+"retry_join": ["provider=aws region=$instance_region tag_key=$cluster_tag_key tag_value=$cluster_tag_value access_key_id=<Access key for user allowed to assume role defined in Terraform> secret_access_key=<Secret key for user allowed to assume role defined in Terraform>"],
 EOF
 )
   fi

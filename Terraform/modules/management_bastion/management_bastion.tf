@@ -17,10 +17,10 @@ variable "bastion_cidr_blocks" {
 }
 
 // This is for temporary internet access until the client has set up a VPN Server
-
+// key generated from your predefined user allowed to assume the IAN role defined in main.tf - see ssh-keygen -y on https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws
 resource "aws_key_pair" "admin" {
   key_name    = "admin-key"
-  public_key   = "<key generated from your predefined user allowed to assume the IAN role defined in main.tf - see ssh-keygen -y on https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws>"
+  public_key   = "<key pair for instance access>"
 }
 
 resource "aws_security_group" "bastion_sg" {
@@ -53,9 +53,25 @@ resource "aws_subnet" "bastion_subnet" {
   }
 }
 
+data "aws_ami" "management_bastion_node" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["bastion-RHEL-linux-74*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+  owners = ["<your account ID>"] # my account
+
+}
+
 resource "aws_instance" "management_bastion" {
   count		      = "${length(var.availability_zones_names)}"
-  ami             = "ami-bb9a6bc2"
+  ami             = "${data.aws_ami.management_bastion_node.id}"
   instance_type   = "t2.micro"
   subnet_id 	  = "${aws_subnet.bastion_subnet.*.id[count.index]}"
   key_name        = "admin-key"

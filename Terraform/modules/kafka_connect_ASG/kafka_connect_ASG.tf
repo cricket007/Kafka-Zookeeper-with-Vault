@@ -19,7 +19,7 @@ data "aws_ami" "kafka_connect_node" {
 
   filter {
     name   = "name"
-    values = ["Kafka_Connect-RHEL-linux-74*"]
+    values = ["kafka_connect-RHEL-linux-74*"]
 //    values = ["Kafka_Connect-Amazon Linux AMI*"]
   }
 

@@ -71,7 +71,7 @@
     "type": "shell",
     "inline": [
       "mkdir ~/.aws",
-      "echo \"[paul]\naws_access_key_id=<Access key for user allowed to assume role defined in Terraform>\naws_secret_access_key=<Secret key for user allowed to assume role defined in Terraform>\n\n[default]\naws_access_key_id=<Access key for user allowed to assume role defined in Terraform>\naws_secret_access_key=<secret key for user allowed to assume role defined in Terraform>\" | sudo tee --append ~/.aws/credentials",
+      "echo \"[paul]\naws_access_key_id=<Access key for user allowed to assume role defined in Terraform>\naws_secret_access_key=<Secret key for user allowed to assume role defined in Terraform>\n\n[default]\naws_access_key_id=<Access key for user allowed to assume role defined in Terraform>\naws_secret_access_key=<Secret key for user allowed to assume role defined in Terraform>\" | sudo tee --append ~/.aws/credentials",
       "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=<ARN for role defined in Terraform>\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
     ]
   },{

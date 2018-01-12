@@ -54,86 +54,63 @@ instances to utilise the Consul cluster, as the consul client agents just don't 
 - AWS CLI installed
 
 ### Getting Started Instructions
-#### update the packer .json files
-- In bastion_base.json:
+#### Populate your variable JSON file
+- The example-file.json looks like:
+```
+{
+  "pem_file_location" : "path to where you have your .pem file",
+  "pem_file" : "name of the .pem file",
+  "aws_account_id" : "root account id",
+  "arn_for_terraform_iam_role" : "arn for the iam role to be used by Terraform",
+  "aws_access_key" : "access key for ssh user",
+  "aws_secret_key" : "secrey key for ssh user",
+  "s3_state_bucket_name" : "name for the terraform start bucket",
+  "access_key_pair" : "genned ker pair needed for the instance user of the servers"
+}
 
-    - replace these variable values with your org's own:
-        - "access_key": "&lt;Access key for user allowed to assume role defined in Terraform&gt;",
-          "secret_key": "&lt;Secret key for user allowed to assume role defined in Terraform&gt;",
-          "account_id": "&lt;your account ID&gt;"
-    - replace these values in the following lines:
-        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
-        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
+```
+Replace these with your values
 
-- In zookeeper.json:
+#### run the variable update script
+- Run replace-placeholders.sh (ensuring that it has execute privleges). if you have just updated the example-file.json:
 
-    - replace these values in the following lines:
-        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
-        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
-
-- In consul.json:
-
-    - replace these values in the following lines:
-        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
-        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
-
-- In vault.json:
-
-    - replace these values in the following lines:
-        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
-        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
-
-- In management-tools.json:
-
-    - replace these values in the following lines:
-        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
-        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
-
-- In kafka.json:
-
-    - replace these values in the following lines:
-        - "echo \"[paul]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt;**\n\n[default]\naws_access_key_id=**&lt;Access key for user allowed to assume role defined in Terraform&gt;**\naws_secret_access_key=**&lt;secret key for user allowed to assume role defined in Terraform&gt;**\" | sudo tee --append ~/.aws/credentials"
-        - "echo \"[default]\nregion=eu-west-1\n\n[profile terraform]\nrole_arn=**&lt;ARN for role defined in Terraform&gt;**\nsource_profile=paul\nregion=eu-west-1\" | sudo tee --append ~/.aws/config"
-        
-- In all of the install-? directories:
-
-    - add a .pem file that you reference in the conf_?.py script. This will allow paramiko to successfully SSH
-
-
-#### In the /Packer/?/install-?/ dirs (? = server name)
-- add the .pem file for the user allowed to assume the role **system_role** defined by Terraform
-- replace this value in:
-    - private_key = paramiko.RSAKey.from_private_key_file('/tmp/install-kafka/**&lt;your .pem file>&gt;**')
-- **For Vault ONLY** replace these variable values with your org's own, in the /Packer/Vault/run-vault/run-vault script:
-    - access_key = "&lt;Access key for user allowed to assume role defined in Terraform&gt;"
-    - secret_key = "&lt;Secret key for user allowed to assume role defined in Terraform&gt;"
-- **For Consul ONLY** replace these variable values with your org's own, in the /Packer/Consul/run-consul/run-consul script line:
+    `replace-placeholders.sh --file example-file.json`
     
-    - "retry_join": ["provider=aws region=$instance_region tag_key=$cluster_tag_key tag_value=$cluster_tag_value access_key_id="**&lt;Access key for user allowed to assume role defined in Terraform&gt**" secret_access_key=**&lt;Secret key for user allowed to assume role defined in Terraform&gt**"],
+    Ensure that your output looks like:
     
-    with the appropriate values
+```
+./replace-placeholders.sh --file example-file.json
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] base path is: /The path to your project base where the script is run
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] Starting placeholder replacement
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] variable file location: example-file.json
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] pem_file_location is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] pem_file is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] aws_account_id is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] arn_for_terraform_iam_role is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] aws_access_key is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] aws_secret_key is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] s3_state_bucket_name is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] access_key_pair is: the value you entered
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] Packer .json fle Placeholder replacement complete!
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] Script Placeholder replacement complete!
+2018-01-12 11:34:27 [INFO] [replace-placeholders.sh] Terraform Placeholder replacement complete!
+2018-01-12 11:34:28 [INFO] [replace-placeholders.sh] .pem file placement complete!
+2018-01-12 11:34:28 [INFO] [replace-placeholders.sh] Placeholder replacement complete!
 
+```
 
-
-#### update the terraform .tf files
-- In /Terraform/envs/test/main.tf
-    - "Principal": {
-          "AWS": "arn:aws:iam::**&lt;your account ID&gt;**:root"
-        } in definiing the system_role IAM role
-- In /Terraform/envs/test/variables.tf
-    - variable "terraform_role" {
-    default = "**&lt;ARN for IAM Role predefined to allow Terraform to create everything&gt;**"
-    description = "The AWS urole that terraform would use"
-  }
-- In the /Terraform/modules/?_ASG directories
-    - in the data "aws_ami" ?_node { definition, replace: owners = ["**&lt;your account ID&gt;**"] with the same account number defined in the packer files
-    
 #### Create the AMI's needed with Packer
 - In the Packer directories containing the respctive .json files:
-    - packer build vault-consul.json
+    - packer build consul.json
+    - packer build vault.json
     - packer build management-tools.json
+    - packer build kafka_connect.json
     - packer build kafka.json
     - packer build zookeeper.json
+    - packer build bastion_base.json
+    
+- when all built successfully you shouls see a list like this in your EC2 -> My AMI's
+![](AMIs-list.png)    
 
 ### Using the Environment
 - In /Terraform/envs/test:
@@ -147,8 +124,6 @@ instances to utilise the Consul cluster, as the consul client agents just don't 
 ### to-Do's
 - Vault requires harcoded AWS keys in run-vault, this needs fixing
 - Consul requires harcoded AWS keys in run-consul, this needs fixing
-- create an initalisation script to update the user, role, and key info
-- define a network ACL to restric traffic between VPC's
 
 ### License
 Copyright [2017] [Paul Pogonoski]

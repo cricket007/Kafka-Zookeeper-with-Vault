@@ -13,8 +13,8 @@ terraform {
   backend "s3" {
     bucket    = "<name for your state bucket>"
     key       = "terraform.tfstate"
-    region    = "${var.region}"
-    role_arn  = "${var.terraform_role}"
+    region    = "eu-west-1"
+    role_arn  = "<ARN for IAM Role predefined to allow Terraform to create everything>"
     acl       = "private"
     encrypt   = true
   }
